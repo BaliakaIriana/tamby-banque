@@ -12,7 +12,7 @@
     <div class="col-sm-6 col-md-4">
         <div class="quick-stats__item">
             <div class="quick-stats__info">
-                <h2>987,459</h2>
+                <h2>${ debit.solde }</h2>
                 <small>Total des débits</small>
             </div>
 
@@ -23,7 +23,7 @@
     <div class="col-sm-6 col-md-4">
         <div class="quick-stats__item">
             <div class="quick-stats__info">
-                <h2>356,785K</h2>
+                <h2>${ -credit.solde }</h2>
                 <small>Total des crédits</small>
             </div>
 

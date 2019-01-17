@@ -50,6 +50,8 @@ public class EtatServlet extends HttpServlet {
                 idcompte = comptes.get(0).getId();
             }
             request.setAttribute("solde", fonction.getSoldeBetweenTwoDates(debut, fin, idcompte));
+            request.setAttribute("debit", fonction.getDebitBetweenTwoDates(debut,fin,idcompte));
+            request.setAttribute("credit", fonction.getCreditBetweenTwoDates(debut,fin,idcompte));
         } catch (Exception e) {
             e.printStackTrace();
         }

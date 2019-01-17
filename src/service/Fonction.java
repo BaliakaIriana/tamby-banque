@@ -6,6 +6,7 @@ import model.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.InvocationTargetException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
@@ -173,36 +174,78 @@ public class Fonction {
     }
 
     public Soldecalcule getSoldeBetweenTwoDates(String debut, String fin, Long idclient) throws Exception {
+        fin += " 23:59:59";
         List<Soldecalcule> soldecalcules = (List<Soldecalcule>) (List<?>) generiqueDAO.findQuery(new Soldecalcule(), "select\n" +
                 "       RECEPTEUR AS IDCLIENT, SUM(MONTANT) as SOLDE\n" +
                 "from (\n" +
-                "       (select RECEPTEUR,SUM(M.MONTANT*S.MONTANT) as MONTANT from MOUVEMENT M join SITUATIONDEVISE S on M.IDSITUATION = S.IDSITUATION WHERE M.DATY BETWEEN to_timestamp('" + debut + "','dd-MM-YYYY') AND TO_TIMESTAMP('" + fin + "','dd-MM-YYYY') GROUP BY RECEPTEUR)\n" +
+                "       (select RECEPTEUR,SUM(M.MONTANT*S.MONTANT) as MONTANT from MOUVEMENT M join SITUATIONDEVISE S on M.IDSITUATION = S.IDSITUATION WHERE M.DATY BETWEEN to_timestamp('" + debut + "','dd-MM-YYYY HH24:MI:SS') AND TO_TIMESTAMP('" + fin + "','dd-MM-YYYY HH24:MI:SS') GROUP BY RECEPTEUR)\n" +
                 "        union\n" +
-                "       (select SENDER,-SUM(MONTANT) as MONTANT FROM MOUVEMENT M where SENDER IS NOT NULL AND M.DATY BETWEEN to_timestamp('" + debut + "','dd-MM-YYYY') AND TO_TIMESTAMP('" + fin + "','dd-MM-YYYY') GROUP BY SENDER)\n" +
+                "       (select SENDER,-SUM(MONTANT) as MONTANT FROM MOUVEMENT M where SENDER IS NOT NULL AND M.DATY BETWEEN to_timestamp('" + debut + "','dd-MM-YYYY HH24:MI:SS') AND TO_TIMESTAMP('" + fin + "','dd-MM-YYYY HH24:MI:SS') GROUP BY SENDER)\n" +
                 "     )\n" +
                 "WHERE RECEPTEUR IS NOT NULL\n AND RECEPTEUR = " + idclient + "\n" +
                 "GROUP BY RECEPTEUR");
         if (soldecalcules.size() != 1) {
-            return new Soldecalcule(idclient,0D);
+            return new Soldecalcule(idclient, 0D);
         }
         Soldecalcule soldecalcule = soldecalcules.get(0);
-        Soldecalcule soldecalculeBefore = getSoldeBefore(debut,idclient);
+        Soldecalcule soldecalculeBefore = getSoldeBefore(debut, idclient);
         soldecalcule.setSolde(soldecalculeBefore.getSolde() + soldecalcule.getSolde());
         return soldecalcule;
     }
+
+    public Soldecalcule getDebitBetweenTwoDates(String debut, String fin, Long idclient) throws NoSuchMethodException, InstantiationException, SQLException, IllegalAccessException, InvocationTargetException, ClassNotFoundException {
+        fin += " 23:59:59";
+        List<Soldecalcule> soldecalcules = (List<Soldecalcule>) (List<?>) generiqueDAO.findQuery(new Soldecalcule(), "select RECEPTEUR as IDCLIENT,SUM(M.MONTANT*S.MONTANT) as SOLDE from MOUVEMENT M join SITUATIONDEVISE S on M.IDSITUATION = S.IDSITUATION WHERE M.DATY BETWEEN to_timestamp('" + debut + "','dd-MM-YYYY HH24:MI:SS') AND TO_TIMESTAMP('" + fin + "','dd-MM-YYYY HH24:MI:SS') AND RECEPTEUR = " + idclient + " GROUP BY RECEPTEUR");
+        if (soldecalcules.isEmpty()) {
+            return new Soldecalcule(idclient, 0D);
+        }
+        Soldecalcule soldecalcule = soldecalcules.get(0);
+        Soldecalcule before = getDebitBefore(debut, idclient);
+        soldecalcule.setSolde(before.getSolde() + soldecalcule.getSolde());
+        return soldecalcule;
+    }
+
+    public Soldecalcule getCreditBetweenTwoDates(String debut, String fin, Long idclient) throws NoSuchMethodException, InstantiationException, SQLException, IllegalAccessException, InvocationTargetException, ClassNotFoundException {
+        fin += " 23:59:59";
+        List<Soldecalcule> soldecalcules = (List<Soldecalcule>) (List<?>) generiqueDAO.findQuery(new Soldecalcule(), "select SENDER as IDCLIENT,-SUM(MONTANT) as SOLDE FROM MOUVEMENT M where SENDER IS NOT NULL AND M.DATY BETWEEN to_timestamp('" + debut + "','dd-MM-YYYY HH24:MI:SS') AND TO_TIMESTAMP('" + fin + "','dd-MM-YYYY HH24:MI:SS') AND SENDER = " + idclient + " GROUP BY SENDER");
+        if (soldecalcules.isEmpty()) {
+            return new Soldecalcule(idclient, 0D);
+        }
+        Soldecalcule soldecalcule = soldecalcules.get(0);
+        Soldecalcule before = getCreditBefore(debut, idclient);
+        soldecalcule.setSolde(before.getSolde() + soldecalcule.getSolde());
+        return soldecalcule;
+    }
+
     public Soldecalcule getSoldeBefore(String debut, Long idclient) throws Exception {
         List<Soldecalcule> soldecalcule = (List<Soldecalcule>) (List<?>) generiqueDAO.findQuery(new Soldecalcule(), "select\n" +
                 "       RECEPTEUR AS IDCLIENT, SUM(MONTANT) as SOLDE\n" +
                 "from (\n" +
-                "       (select RECEPTEUR,SUM(M.MONTANT*S.MONTANT) as MONTANT from MOUVEMENT M join SITUATIONDEVISE S on M.IDSITUATION = S.IDSITUATION WHERE M.DATY < to_timestamp('" + debut + "','dd-MM-YYYY') GROUP BY RECEPTEUR)\n" +
+                "       (select RECEPTEUR,SUM(M.MONTANT*S.MONTANT) as MONTANT from MOUVEMENT M join SITUATIONDEVISE S on M.IDSITUATION = S.IDSITUATION WHERE M.DATY < to_timestamp('" + debut + "','dd-MM-YYYY HH24:MI:SS') GROUP BY RECEPTEUR)\n" +
                 "        union\n" +
-                "       (select SENDER,-SUM(MONTANT) as MONTANT FROM MOUVEMENT M where SENDER IS NOT NULL AND M.DATY < to_timestamp('" + debut + "','dd-MM-YYYY') GROUP BY SENDER)\n" +
+                "       (select SENDER,-SUM(MONTANT) as MONTANT FROM MOUVEMENT M where SENDER IS NOT NULL AND M.DATY < to_timestamp('" + debut + "','dd-MM-YYYY HH24:MI:SS') GROUP BY SENDER)\n" +
                 "     )\n" +
                 "WHERE RECEPTEUR IS NOT NULL\n AND RECEPTEUR = " + idclient + "\n" +
                 "GROUP BY RECEPTEUR");
         if (soldecalcule.size() != 1) {
-            return new Soldecalcule(idclient,0D);
+            return new Soldecalcule(idclient, 0D);
         }
         return soldecalcule.get(0);
+    }
+
+    public Soldecalcule getDebitBefore(String debut, Long idclient) throws NoSuchMethodException, InstantiationException, SQLException, IllegalAccessException, InvocationTargetException, ClassNotFoundException {
+        List<Soldecalcule> soldecalcules = (List<Soldecalcule>) (List<?>) generiqueDAO.findQuery(new Soldecalcule(), "select RECEPTEUR as IDCLIENT,SUM(M.MONTANT*S.MONTANT) as SOLDE from MOUVEMENT M join SITUATIONDEVISE S on M.IDSITUATION = S.IDSITUATION WHERE M.DATY < to_timestamp('" + debut + "','dd-MM-YYYY HH24:MI:SS') AND RECEPTEUR = " + idclient + " GROUP BY RECEPTEUR");
+        if (soldecalcules.isEmpty()) {
+            return new Soldecalcule(idclient, 0D);
+        }
+        return soldecalcules.get(0);
+    }
+
+    public Soldecalcule getCreditBefore(String debut, Long idclient) throws NoSuchMethodException, InstantiationException, SQLException, IllegalAccessException, InvocationTargetException, ClassNotFoundException {
+        List<Soldecalcule> soldecalcules = (List<Soldecalcule>) (List<?>) generiqueDAO.findQuery(new Soldecalcule(), "select SENDER,-SUM(MONTANT) as SOLDE FROM MOUVEMENT M where SENDER IS NOT NULL AND M.DATY < to_timestamp('" + debut + "','dd-MM-YYYY HH24:MI:SS') AND SENDER = " + idclient + " GROUP BY SENDER");
+        if (soldecalcules.isEmpty()) {
+            return new Soldecalcule(idclient, 0D);
+        }
+        return soldecalcules.get(0);
     }
 }
